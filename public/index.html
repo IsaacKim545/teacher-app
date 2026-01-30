@@ -33,12 +33,23 @@
     header h1 {
       font-size: 1.3rem;
       margin-bottom: 8px;
-      cursor: pointer;
     }
     
-    header h1:hover { text-decoration: underline; }
-    
     header .subtitle { opacity: 0.9; font-size: 0.9rem; }
+    
+    .settings-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+    
+    .settings-btn:hover { background: rgba(255,255,255,0.3); }
     
     .tab-nav {
       display: flex;
@@ -492,8 +503,9 @@
 <body>
   <div class="app">
     <header>
-      <h1 id="headerTitle" onclick="openClassSetup()">🏫 학급 관리</h1>
+      <h1 id="headerTitle">🏫 학급 관리</h1>
       <div class="subtitle">총 <span id="totalCount">0</span>명</div>
+      <button class="settings-btn" onclick="openClassSetup()">⚙️ 학급 설정 변경</button>
     </header>
     
     <div id="tab-students" class="tab-content active">
