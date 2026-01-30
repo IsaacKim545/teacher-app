@@ -899,8 +899,19 @@
       const number = parseInt(document.getElementById('addNumber').value);
       const name = document.getElementById('addName').value.trim();
       
-      if (!number || !name) {
-        alert('번호와 이름을 입력해주세요');
+      if (!number || number < 1 || !Number.isInteger(number)) {
+        alert('번호는 1 이상의 자연수를 입력해주세요');
+        return;
+      }
+      
+      if (!name) {
+        alert('이름을 입력해주세요');
+        return;
+      }
+      
+      // 번호 중복 체크
+      if (students.some(s => s.number === number)) {
+        alert(`${number}번은 이미 사용 중입니다`);
         return;
       }
       
@@ -968,11 +979,30 @@
     }
     
     async function saveStudent() {
-      const id = document.getElementById('editId').value;
+      const id = parseInt(document.getElementById('editId').value);
+      const number = parseInt(document.getElementById('editNumber').value);
+      const name = document.getElementById('editName').value.trim();
+      
+      if (!number || number < 1 || !Number.isInteger(number)) {
+        alert('번호는 1 이상의 자연수를 입력해주세요');
+        return;
+      }
+      
+      if (!name) {
+        alert('이름을 입력해주세요');
+        return;
+      }
+      
+      // 번호 중복 체크 (자기 자신 제외)
+      if (students.some(s => s.number === number && s.id !== id)) {
+        alert(`${number}번은 이미 사용 중입니다`);
+        return;
+      }
+      
       const data = {
         device_id: classId,
-        number: parseInt(document.getElementById('editNumber').value),
-        name: document.getElementById('editName').value,
+        number: number,
+        name: name,
         phone: document.getElementById('editPhone').value,
         parent_phone: document.getElementById('editParentPhone').value,
         memo: document.getElementById('editMemo').value
