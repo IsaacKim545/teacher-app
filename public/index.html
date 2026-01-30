@@ -37,20 +37,6 @@
     
     header .subtitle { opacity: 0.9; font-size: 0.9rem; }
     
-    .settings-btn {
-      background: rgba(255,255,255,0.2);
-      border: none;
-      color: white;
-      padding: 5px 10px;
-      border-radius: 15px;
-      font-size: 0.75rem;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: background 0.2s;
-    }
-    
-    .settings-btn:hover { background: rgba(255,255,255,0.3); }
-    
     .tab-nav {
       display: flex;
       position: fixed;
@@ -464,6 +450,32 @@
     .record-form-tab .form-group { margin-bottom: 12px; }
     .record-form-tab textarea { min-height: 80px; }
     
+    .settings-info {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 15px;
+    }
+    
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .settings-row:last-child { border-bottom: none; }
+    
+    .settings-label {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    
+    .settings-value {
+      font-weight: 500;
+      color: #333;
+    }
+    
     .class-setup-modal { text-align: center; }
     .class-setup-modal .icon { font-size: 4rem; margin-bottom: 15px; }
     .class-setup-modal p { color: #666; margin-bottom: 15px; font-size: 0.9rem; }
@@ -515,7 +527,6 @@
     <header>
       <h1 id="headerTitle">🏫 학급 관리</h1>
       <div class="subtitle">총 <span id="totalCount">0</span>명</div>
-      <button class="settings-btn" onclick="openClassSetup()">⚙️ 학급 설정 변경</button>
     </header>
     
     <div id="tab-students" class="tab-content active">
@@ -603,6 +614,43 @@
       </div>
     </div>
     
+    <div id="tab-settings" class="tab-content">
+      <div class="card">
+        <h2>🏫 학급 설정</h2>
+        <div class="settings-info">
+          <div class="settings-row">
+            <span class="settings-label">현재 학급</span>
+            <span class="settings-value" id="currentClassInfo">-</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">감지된 기기</span>
+            <span class="settings-value" id="currentDeviceInfo">-</span>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="openClassSetup()" style="margin-top:15px;">학급 설정 변경</button>
+      </div>
+      
+      <div class="card">
+        <h2>📊 통계</h2>
+        <div class="settings-info">
+          <div class="settings-row">
+            <span class="settings-label">등록된 학생 수</span>
+            <span class="settings-value" id="statsStudentCount">0명</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">누가기록 수</span>
+            <span class="settings-value" id="statsRecordCount">0건</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>⚠️ 데이터 관리</h2>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:15px;">주의: 삭제된 데이터는 복구할 수 없습니다.</p>
+        <button class="btn btn-danger" onclick="resetAllData()">모든 데이터 초기화</button>
+      </div>
+    </div>
+    
     <nav class="tab-nav">
       <button class="tab-btn active" onclick="switchTab('students')">
         <span class="icon">👥</span>
@@ -615,6 +663,10 @@
       <button class="tab-btn" onclick="switchTab('records')">
         <span class="icon">📝</span>
         누가기록
+      </button>
+      <button class="tab-btn" onclick="switchTab('settings')">
+        <span class="icon">⚙️</span>
+        설정
       </button>
     </nav>
   </div>
@@ -875,6 +927,61 @@
       
       if (tab === 'attendance') loadAttendance();
       if (tab === 'records') initRecordsTab();
+      if (tab === 'settings') initSettingsTab();
+    }
+    
+    // ============ 설정 탭 ============
+    
+    function initSettingsTab() {
+      const { grade, classNum } = getConfig();
+      
+      if (grade && classNum) {
+        document.getElementById('currentClassInfo').textContent = `${grade}학년 ${classNum}반`;
+      } else {
+        document.getElementById('currentClassInfo').textContent = '설정되지 않음';
+      }
+      
+      document.getElementById('currentDeviceInfo').textContent = deviceModel;
+      document.getElementById('statsStudentCount').textContent = students.length + '명';
+      
+      // 전체 기록 수 가져오기
+      loadTotalRecordCount();
+    }
+    
+    async function loadTotalRecordCount() {
+      let totalRecords = 0;
+      
+      for (const student of students) {
+        try {
+          const res = await fetch('/api/records/' + student.id + '?device_id=' + encodeURIComponent(classId));
+          const records = await res.json();
+          totalRecords += records.length;
+        } catch (e) {}
+      }
+      
+      document.getElementById('statsRecordCount').textContent = totalRecords + '건';
+    }
+    
+    async function resetAllData() {
+      if (!confirm('정말 모든 데이터를 삭제하시겠습니까?\n\n학생 명단, 출석 기록, 누가 기록이 모두 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.')) {
+        return;
+      }
+      
+      if (!confirm('한 번 더 확인합니다.\n정말로 모든 데이터를 삭제하시겠습니까?')) {
+        return;
+      }
+      
+      // 모든 학생 삭제 (연관된 출석, 기록도 함께 삭제됨)
+      for (const student of students) {
+        await fetch('/api/students/' + student.id + '?device_id=' + encodeURIComponent(classId), { method: 'DELETE' });
+      }
+      
+      students = [];
+      document.getElementById('totalCount').textContent = '0';
+      document.getElementById('statsStudentCount').textContent = '0명';
+      document.getElementById('statsRecordCount').textContent = '0건';
+      
+      showToast('모든 데이터가 삭제되었습니다');
     }
     
     // ============ 누가 기록 탭 ============
