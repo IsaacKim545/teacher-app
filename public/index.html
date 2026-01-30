@@ -30,10 +30,14 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
     
-    header h1 { font-size: 1.4rem; margin-bottom: 5px; }
-    header .class-name { font-size: 1.1rem; margin-bottom: 3px; cursor: pointer; }
-    header .class-name:hover { text-decoration: underline; }
-    header .device-info { font-size: 0.75rem; opacity: 0.8; margin-bottom: 5px; }
+    header h1 {
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    
+    header h1:hover { text-decoration: underline; }
+    
     header .subtitle { opacity: 0.9; font-size: 0.9rem; }
     
     .tab-nav {
@@ -488,9 +492,7 @@
 <body>
   <div class="app">
     <header>
-      <h1>🏫 학급 관리</h1>
-      <div class="class-name" id="classNameDisplay" onclick="openClassSetup()">학급을 설정해주세요</div>
-      <div class="device-info" id="deviceInfoDisplay"></div>
+      <h1 id="headerTitle" onclick="openClassSetup()">🏫 학급 관리</h1>
       <div class="subtitle">총 <span id="totalCount">0</span>명</div>
     </header>
     
@@ -677,8 +679,6 @@
     // 기기 모델 감지
     function detectDevice() {
       const ua = navigator.userAgent;
-      const platform = navigator.platform || '';
-      const vendor = navigator.vendor || '';
       
       let device = 'Unknown';
       let os = 'Unknown';
@@ -697,7 +697,6 @@
         os = 'Android';
         const match = ua.match(/Android (\d+\.?\d*)/);
         if (match) os += ' ' + match[1];
-        // Android 기기 모델 추출
         const modelMatch = ua.match(/;\s*([^;]+)\s*Build/);
         if (modelMatch) device = modelMatch[1].trim();
       } else if (/Windows NT/.test(ua)) {
@@ -723,7 +722,6 @@
       else if (/Firefox\//.test(ua)) browser = 'Firefox';
       else if (/MSIE|Trident/.test(ua)) browser = 'IE';
       
-      // 최종 기기 문자열 생성
       if (device !== 'Unknown') {
         return `${device} (${os})`;
       } else if (os.includes('iPhone') || os.includes('iPad')) {
@@ -733,14 +731,13 @@
       }
     }
     
-    // 기기 ID 생성 (기기 정보 해시)
+    // 기기 ID 생성
     function generateDeviceId() {
       const ua = navigator.userAgent;
       const screen = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const lang = navigator.language;
       
-      // 간단한 해시 생성
       const str = ua + screen + timezone + lang;
       let hash = 0;
       for (let i = 0; i < str.length; i++) {
@@ -751,7 +748,6 @@
       return Math.abs(hash).toString(36);
     }
     
-    // 저장된 설정 로드
     function getConfig() {
       return {
         grade: localStorage.getItem('tc_grade'),
@@ -759,30 +755,30 @@
       };
     }
     
-    // 설정 저장
     function setConfig(grade, classNum) {
       localStorage.setItem('tc_grade', grade);
       localStorage.setItem('tc_class', classNum);
     }
     
-    // 학급 ID 생성 (기기ID + 학년 + 반)
     function generateClassId(grade, classNum, deviceId) {
       return `${deviceId}_${grade}_${classNum}`;
     }
     
+    function updateHeaderTitle(grade, classNum) {
+      document.getElementById('headerTitle').textContent = `🏫 ${grade}학년 ${classNum}반 학급 관리`;
+    }
+    
     document.addEventListener('DOMContentLoaded', () => {
-      // 기기 감지
       deviceModel = detectDevice();
       const deviceId = generateDeviceId();
       
       document.getElementById('detectedDevice').textContent = deviceModel;
-      document.getElementById('deviceInfoDisplay').textContent = `📱 ${deviceModel}`;
       
       const { grade, classNum } = getConfig();
       
       if (grade && classNum) {
         classId = generateClassId(grade, classNum, deviceId);
-        document.getElementById('classNameDisplay').textContent = `${grade}학년 ${classNum}반`;
+        updateHeaderTitle(grade, classNum);
         loadStudents();
       } else {
         document.getElementById('classSetupModal').classList.add('active');
@@ -816,7 +812,7 @@
       const deviceId = generateDeviceId();
       classId = generateClassId(grade, classNum, deviceId);
       
-      document.getElementById('classNameDisplay').textContent = `${grade}학년 ${classNum}반`;
+      updateHeaderTitle(grade, classNum);
       document.getElementById('classSetupModal').classList.remove('active');
       
       loadStudents();
