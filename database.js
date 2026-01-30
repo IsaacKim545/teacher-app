@@ -39,6 +39,17 @@ async function initDatabase() {
     )
   `);
   
+  // 누가 기록 테이블
+  db.run(`
+    CREATE TABLE IF NOT EXISTS records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `);
+  
   saveDatabase();
   return db;
 }

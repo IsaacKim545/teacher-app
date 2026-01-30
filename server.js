@@ -82,6 +82,7 @@ app.delete('/api/students/:id', (req, res) => {
     const db = getDb();
     db.run('DELETE FROM students WHERE id = ?', [req.params.id]);
     db.run('DELETE FROM attendance WHERE student_id = ?', [req.params.id]);
+    db.run('DELETE FROM records WHERE student_id = ?', [req.params.id]);
     saveDatabase();
     res.json({ message: '삭제 완료' });
   } catch (error) {
@@ -131,6 +132,57 @@ app.get('/api/attendance/stats/:student_id', (req, res) => {
       GROUP BY status
     `);
     res.json(toArray(result));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============ 누가 기록 API ============
+
+// 학생별 누가 기록 조회
+app.get('/api/records/:student_id', (req, res) => {
+  try {
+    const db = getDb();
+    const result = db.exec(`SELECT * FROM records WHERE student_id = ${req.params.student_id} ORDER BY created_at DESC`);
+    res.json(toArray(result));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 누가 기록 추가 (날짜/시간은 서버에서 자동 생성)
+app.post('/api/records', (req, res) => {
+  try {
+    const { student_id, type, content } = req.body;
+    
+    if (!student_id || !type || !content) {
+      return res.status(400).json({ error: '필수 항목을 입력해주세요' });
+    }
+    
+    // 서버 시간으로 자동 생성 (한국 시간)
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const created_at = koreaTime.toISOString().replace('T', ' ').substring(0, 19);
+    
+    const db = getDb();
+    db.run('INSERT INTO records (student_id, type, content, created_at) VALUES (?, ?, ?, ?)', 
+      [student_id, type, content, created_at]);
+    saveDatabase();
+    
+    const result = db.exec('SELECT last_insert_rowid() as id');
+    res.json({ id: result[0].values[0][0], student_id, type, content, created_at });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 누가 기록 삭제
+app.delete('/api/records/:id', (req, res) => {
+  try {
+    const db = getDb();
+    db.run('DELETE FROM records WHERE id = ?', [req.params.id]);
+    saveDatabase();
+    res.json({ message: '삭제 완료' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

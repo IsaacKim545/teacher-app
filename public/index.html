@@ -88,7 +88,7 @@
       margin-bottom: 5px;
     }
     
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 12px;
       border: 2px solid #e9ecef;
@@ -97,7 +97,7 @@
       transition: border-color 0.2s;
     }
     
-    input:focus, textarea:focus {
+    input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: #4A90A4;
     }
@@ -342,6 +342,124 @@
     
     .toast.show { opacity: 1; }
     
+    /* 누가 기록 스타일 */
+    .record-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+    
+    .record-section h3 {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .record-item {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    
+    .record-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .record-type {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+    
+    .record-type.behavior { background: #e3f2fd; color: #1976d2; }
+    .record-type.guidance { background: #fff3e0; color: #f57c00; }
+    .record-type.counseling { background: #f3e5f5; color: #7b1fa2; }
+    
+    .record-date {
+      font-size: 0.75rem;
+      color: #999;
+    }
+    
+    .record-content {
+      font-size: 0.9rem;
+      color: #333;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    
+    .record-delete {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px;
+    }
+    
+    .record-delete:hover { color: #e74c3c; }
+    
+    .add-record-btn {
+      background: none;
+      border: 2px dashed #ccc;
+      border-radius: 10px;
+      padding: 15px;
+      width: 100%;
+      color: #888;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    
+    .add-record-btn:hover {
+      border-color: #4A90A4;
+      color: #4A90A4;
+    }
+    
+    .record-form {
+      background: #f0f7ff;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    
+    .record-form.hidden { display: none; }
+    
+    .record-form select {
+      margin-bottom: 10px;
+    }
+    
+    .record-form textarea {
+      margin-bottom: 10px;
+      min-height: 100px;
+    }
+    
+    .record-form-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .record-form-actions .btn {
+      flex: 1;
+      padding: 10px;
+    }
+    
+    .record-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
     @media (max-width: 400px) {
       .attendance-btns { margin-left: 0; width: 100%; justify-content: flex-end; }
       .att-btn { padding: 8px 12px; }
@@ -418,6 +536,7 @@
     </nav>
   </div>
   
+  <!-- 학생 상세 모달 -->
   <div class="modal-overlay" id="studentModal">
     <div class="modal">
       <h2>👤 학생 정보</h2>
@@ -445,6 +564,7 @@
         <textarea id="editMemo" placeholder="특이사항, 알레르기 등"></textarea>
       </div>
       
+      <!-- 출결 현황 -->
       <div class="attendance-stats-section">
         <h3>📊 출결 현황</h3>
         <div class="mini-stats">
@@ -464,9 +584,36 @@
         <div class="attendance-bar" id="modalBar"></div>
       </div>
       
+      <!-- 누가 기록 -->
+      <div class="record-section">
+        <h3>
+          📝 누가 기록
+          <span id="recordCount" style="font-weight:normal; color:#4A90A4;">0건</span>
+        </h3>
+        
+        <!-- 기록 추가 폼 -->
+        <div class="record-form hidden" id="recordForm">
+          <select id="recordType">
+            <option value="behavior">학생행동특이사항</option>
+            <option value="guidance">교사지도내용</option>
+            <option value="counseling">상담내용</option>
+          </select>
+          <textarea id="recordContent" placeholder="내용을 입력하세요"></textarea>
+          <div class="record-form-actions">
+            <button class="btn btn-secondary" onclick="hideRecordForm()">취소</button>
+            <button class="btn btn-primary" onclick="saveRecord()">저장</button>
+          </div>
+        </div>
+        
+        <button class="add-record-btn" id="addRecordBtn" onclick="showRecordForm()">+ 새 기록 추가</button>
+        
+        <!-- 기록 목록 -->
+        <div class="record-list" id="recordList"></div>
+      </div>
+      
       <div class="modal-actions">
         <button class="btn btn-danger" onclick="deleteStudent()">삭제</button>
-        <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+        <button class="btn btn-secondary" onclick="closeModal()">닫기</button>
         <button class="btn btn-primary" onclick="saveStudent()">저장</button>
       </div>
     </div>
@@ -477,6 +624,13 @@
   <script>
     let students = [];
     let attendance = {};
+    let currentStudentId = null;
+    
+    const TYPE_LABELS = {
+      behavior: '학생행동특이사항',
+      guidance: '교사지도내용',
+      counseling: '상담내용'
+    };
     
     document.addEventListener('DOMContentLoaded', () => {
       loadStudents();
@@ -567,6 +721,8 @@
     }
     
     async function openStudent(id) {
+      currentStudentId = id;
+      
       const res = await fetch('/api/students/' + id);
       const s = await res.json();
       
@@ -604,11 +760,18 @@
         bar.innerHTML = '';
       }
       
+      // 누가 기록 로드
+      await loadRecords(id);
+      
+      // 폼 초기화
+      hideRecordForm();
+      
       document.getElementById('studentModal').classList.add('active');
     }
     
     function closeModal() {
       document.getElementById('studentModal').classList.remove('active');
+      currentStudentId = null;
     }
     
     async function saveStudent() {
@@ -633,7 +796,7 @@
     }
     
     async function deleteStudent() {
-      if (!confirm('정말 삭제하시겠습니까?')) return;
+      if (!confirm('정말 삭제하시겠습니까?\n관련된 모든 기록도 삭제됩니다.')) return;
       
       const id = document.getElementById('editId').value;
       await fetch('/api/students/' + id, { method: 'DELETE' });
@@ -721,6 +884,84 @@
       document.getElementById('statPresent').textContent = present;
       document.getElementById('statLate').textContent = late;
       document.getElementById('statAbsent').textContent = absent;
+    }
+    
+    // ============ 누가 기록 관리 ============
+    
+    async function loadRecords(studentId) {
+      const res = await fetch('/api/records/' + studentId);
+      const records = await res.json();
+      
+      document.getElementById('recordCount').textContent = records.length + '건';
+      
+      const container = document.getElementById('recordList');
+      
+      if (records.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#888; padding:20px; font-size:0.9rem;">기록이 없습니다</div>';
+        return;
+      }
+      
+      container.innerHTML = records.map(r => `
+        <div class="record-item">
+          <button class="record-delete" onclick="deleteRecord(${r.id})" title="삭제">×</button>
+          <div class="record-header">
+            <span class="record-type ${r.type}">${TYPE_LABELS[r.type]}</span>
+            <span class="record-date">${r.created_at}</span>
+          </div>
+          <div class="record-content">${escapeHtml(r.content)}</div>
+        </div>
+      `).join('');
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function showRecordForm() {
+      document.getElementById('recordForm').classList.remove('hidden');
+      document.getElementById('addRecordBtn').style.display = 'none';
+      document.getElementById('recordContent').focus();
+    }
+    
+    function hideRecordForm() {
+      document.getElementById('recordForm').classList.add('hidden');
+      document.getElementById('addRecordBtn').style.display = 'block';
+      document.getElementById('recordType').value = 'behavior';
+      document.getElementById('recordContent').value = '';
+    }
+    
+    async function saveRecord() {
+      const type = document.getElementById('recordType').value;
+      const content = document.getElementById('recordContent').value.trim();
+      
+      if (!content) {
+        alert('내용을 입력해주세요');
+        return;
+      }
+      
+      await fetch('/api/records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: currentStudentId,
+          type,
+          content
+        })
+      });
+      
+      hideRecordForm();
+      await loadRecords(currentStudentId);
+      showToast('기록이 저장되었습니다');
+    }
+    
+    async function deleteRecord(id) {
+      if (!confirm('이 기록을 삭제하시겠습니까?')) return;
+      
+      await fetch('/api/records/' + id, { method: 'DELETE' });
+      await loadRecords(currentStudentId);
+      showToast('기록이 삭제되었습니다');
     }
   </script>
 </body>
