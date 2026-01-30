@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>학급 관리</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .app {
+      max-width: 500px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: #f8f9fa;
+      position: relative;
+      padding-bottom: 70px;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #4A90A4 0%, #357ABD 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    
+    header h1 { font-size: 1.4rem; margin-bottom: 5px; }
+    header .subtitle { opacity: 0.9; font-size: 0.9rem; }
+    
+    .tab-nav {
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      z-index: 100;
+    }
+    
+    .tab-btn {
+      flex: 1;
+      padding: 12px 0;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #888;
+      transition: all 0.2s;
+    }
+    
+    .tab-btn.active { color: #4A90A4; font-weight: bold; }
+    .tab-btn .icon { font-size: 1.3rem; display: block; margin-bottom: 3px; }
+    
+    .tab-content { display: none; padding: 15px; }
+    .tab-content.active { display: block; }
+    
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .card h2 {
+      font-size: 1rem;
+      color: #333;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .form-group { margin-bottom: 12px; }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #4A90A4;
+    }
+    
+    textarea { resize: vertical; min-height: 80px; }
+    
+    .form-row { display: flex; gap: 10px; }
+    .form-row .form-group { flex: 1; }
+    .form-row .form-group.small { flex: 0 0 80px; }
+    
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #4A90A4 0%, #357ABD 100%);
+      color: white;
+      width: 100%;
+    }
+    
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(74,144,164,0.4); }
+    
+    .btn-sm { padding: 8px 12px; font-size: 0.85rem; }
+    .btn-danger { background: #e74c3c; color: white; }
+    .btn-success { background: #27ae60; color: white; }
+    .btn-warning { background: #f39c12; color: white; }
+    .btn-secondary { background: #95a5a6; color: white; }
+    
+    .student-item {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .student-item:hover { background: #e9ecef; transform: translateX(3px); }
+    
+    .student-num {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #4A90A4 0%, #357ABD 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    
+    .student-info { flex: 1; min-width: 0; }
+    .student-name { font-weight: 500; color: #333; }
+    .student-detail { font-size: 0.8rem; color: #888; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    
+    .attendance-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .attendance-btns {
+      display: flex;
+      gap: 5px;
+      margin-left: auto;
+    }
+    
+    .att-btn {
+      padding: 6px 10px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+    
+    .att-btn.present.active { background: #27ae60; color: white; border-color: #27ae60; }
+    .att-btn.late.active { background: #f39c12; color: white; border-color: #f39c12; }
+    .att-btn.absent.active { background: #e74c3c; color: white; border-color: #e74c3c; }
+    
+    .date-picker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .date-picker input { flex: 1; text-align: center; }
+    
+    .date-nav {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: #4A90A4;
+      color: white;
+      cursor: pointer;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    
+    .stats {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .stat-box {
+      flex: 1;
+      text-align: center;
+      padding: 12px;
+      border-radius: 12px;
+      background: #f8f9fa;
+    }
+    
+    .stat-num { font-size: 1.5rem; font-weight: bold; }
+    .stat-label { font-size: 0.75rem; color: #888; }
+    
+    .stat-box.present .stat-num { color: #27ae60; }
+    .stat-box.late .stat-num { color: #f39c12; }
+    .stat-box.absent .stat-num { color: #e74c3c; }
+    
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .modal-overlay.active { display: flex; }
+    
+    .modal {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      width: 100%;
+      max-width: 400px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal h2 { margin-bottom: 20px; }
+    
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .modal-actions .btn { flex: 1; }
+    
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: #888;
+    }
+    
+    .empty .icon { font-size: 3rem; margin-bottom: 10px; }
+    
+    .attendance-stats-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+    
+    .attendance-stats-section h3 {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 12px;
+    }
+    
+    .mini-stats {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .mini-stat {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      border-radius: 10px;
+      background: #f8f9fa;
+    }
+    
+    .mini-stat .num { font-size: 1.3rem; font-weight: bold; }
+    .mini-stat .label { font-size: 0.7rem; color: #888; }
+    .mini-stat.present .num { color: #27ae60; }
+    .mini-stat.late .num { color: #f39c12; }
+    .mini-stat.absent .num { color: #e74c3c; }
+    
+    .attendance-bar {
+      height: 12px;
+      background: #eee;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+    }
+    
+    .attendance-bar .present { background: #27ae60; }
+    .attendance-bar .late { background: #f39c12; }
+    .attendance-bar .absent { background: #e74c3c; }
+    
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      z-index: 300;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .toast.show { opacity: 1; }
+    
+    @media (max-width: 400px) {
+      .attendance-btns { margin-left: 0; width: 100%; justify-content: flex-end; }
+      .att-btn { padding: 8px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🏫 우리반 학급 관리</h1>
+      <div class="subtitle">총 <span id="totalCount">0</span>명</div>
+    </header>
+    
+    <div id="tab-students" class="tab-content active">
+      <div class="card">
+        <h2>➕ 학생 등록</h2>
+        <div class="form-row">
+          <div class="form-group small">
+            <input type="number" id="addNumber" placeholder="번호" min="1">
+          </div>
+          <div class="form-group">
+            <input type="text" id="addName" placeholder="이름">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addStudent()">학생 추가</button>
+      </div>
+      
+      <div class="card">
+        <h2>📋 학생 목록</h2>
+        <div id="studentList">
+          <div class="empty">
+            <div class="icon">📚</div>
+            <div>등록된 학생이 없습니다</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="tab-attendance" class="tab-content">
+      <div class="card">
+        <h2>📅 출석 체크</h2>
+        <div class="date-picker">
+          <button class="date-nav" onclick="changeDate(-1)">◀</button>
+          <input type="date" id="attendanceDate" onchange="loadAttendance()">
+          <button class="date-nav" onclick="changeDate(1)">▶</button>
+        </div>
+        <div class="stats">
+          <div class="stat-box present">
+            <div class="stat-num" id="statPresent">0</div>
+            <div class="stat-label">출석</div>
+          </div>
+          <div class="stat-box late">
+            <div class="stat-num" id="statLate">0</div>
+            <div class="stat-label">지각</div>
+          </div>
+          <div class="stat-box absent">
+            <div class="stat-num" id="statAbsent">0</div>
+            <div class="stat-label">결석</div>
+          </div>
+        </div>
+        <div id="attendanceList"></div>
+      </div>
+    </div>
+    
+    <nav class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('students')">
+        <span class="icon">👥</span>
+        학생
+      </button>
+      <button class="tab-btn" onclick="switchTab('attendance')">
+        <span class="icon">✅</span>
+        출석
+      </button>
+    </nav>
+  </div>
+  
+  <div class="modal-overlay" id="studentModal">
+    <div class="modal">
+      <h2>👤 학생 정보</h2>
+      <input type="hidden" id="editId">
+      <div class="form-row">
+        <div class="form-group small">
+          <label>번호</label>
+          <input type="number" id="editNumber">
+        </div>
+        <div class="form-group">
+          <label>이름</label>
+          <input type="text" id="editName">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>연락처</label>
+        <input type="tel" id="editPhone" placeholder="010-0000-0000">
+      </div>
+      <div class="form-group">
+        <label>학부모 연락처</label>
+        <input type="tel" id="editParentPhone" placeholder="010-0000-0000">
+      </div>
+      <div class="form-group">
+        <label>메모</label>
+        <textarea id="editMemo" placeholder="특이사항, 알레르기 등"></textarea>
+      </div>
+      
+      <div class="attendance-stats-section">
+        <h3>📊 출결 현황</h3>
+        <div class="mini-stats">
+          <div class="mini-stat present">
+            <div class="num" id="modalPresent">0</div>
+            <div class="label">출석</div>
+          </div>
+          <div class="mini-stat late">
+            <div class="num" id="modalLate">0</div>
+            <div class="label">지각</div>
+          </div>
+          <div class="mini-stat absent">
+            <div class="num" id="modalAbsent">0</div>
+            <div class="label">결석</div>
+          </div>
+        </div>
+        <div class="attendance-bar" id="modalBar"></div>
+      </div>
+      
+      <div class="modal-actions">
+        <button class="btn btn-danger" onclick="deleteStudent()">삭제</button>
+        <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveStudent()">저장</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let students = [];
+    let attendance = {};
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStudents();
+      document.getElementById('attendanceDate').value = getToday();
+      
+      document.getElementById('addName').addEventListener('keypress', e => {
+        if (e.key === 'Enter') addStudent();
+      });
+    });
+    
+    function getToday() {
+      return new Date().toISOString().split('T')[0];
+    }
+    
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+    
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById('tab-' + tab).classList.add('active');
+      event.target.closest('.tab-btn').classList.add('active');
+      
+      if (tab === 'attendance') loadAttendance();
+    }
+    
+    // ============ 학생 관리 ============
+    
+    async function loadStudents() {
+      try {
+        const res = await fetch('/api/students');
+        students = await res.json();
+        document.getElementById('totalCount').textContent = students.length;
+        renderStudentList();
+      } catch (e) {
+        showToast('데이터를 불러올 수 없습니다');
+      }
+    }
+    
+    function renderStudentList() {
+      const container = document.getElementById('studentList');
+      
+      if (students.length === 0) {
+        container.innerHTML = `
+          <div class="empty">
+            <div class="icon">📚</div>
+            <div>등록된 학생이 없습니다</div>
+          </div>`;
+        return;
+      }
+      
+      container.innerHTML = students.map(s => `
+        <div class="student-item" onclick="openStudent(${s.id})">
+          <div class="student-num">${s.number}</div>
+          <div class="student-info">
+            <div class="student-name">${s.name}</div>
+            ${s.memo ? `<div class="student-detail">${s.memo}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    async function addStudent() {
+      const number = parseInt(document.getElementById('addNumber').value);
+      const name = document.getElementById('addName').value.trim();
+      
+      if (!number || !name) {
+        alert('번호와 이름을 입력해주세요');
+        return;
+      }
+      
+      await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number, name })
+      });
+      
+      document.getElementById('addNumber').value = '';
+      document.getElementById('addName').value = '';
+      document.getElementById('addNumber').focus();
+      loadStudents();
+      showToast('학생이 추가되었습니다');
+    }
+    
+    async function openStudent(id) {
+      const res = await fetch('/api/students/' + id);
+      const s = await res.json();
+      
+      document.getElementById('editId').value = s.id;
+      document.getElementById('editNumber').value = s.number;
+      document.getElementById('editName').value = s.name;
+      document.getElementById('editPhone').value = s.phone || '';
+      document.getElementById('editParentPhone').value = s.parent_phone || '';
+      document.getElementById('editMemo').value = s.memo || '';
+      
+      // 출결 통계
+      const statsRes = await fetch('/api/attendance/stats/' + id);
+      const statsData = await statsRes.json();
+      
+      let present = 0, late = 0, absent = 0;
+      statsData.forEach(s => {
+        if (s.status === 'present') present = s.count;
+        else if (s.status === 'late') late = s.count;
+        else if (s.status === 'absent') absent = s.count;
+      });
+      
+      document.getElementById('modalPresent').textContent = present;
+      document.getElementById('modalLate').textContent = late;
+      document.getElementById('modalAbsent').textContent = absent;
+      
+      const total = present + late + absent;
+      const bar = document.getElementById('modalBar');
+      if (total > 0) {
+        bar.innerHTML = `
+          <div class="present" style="width:${present/total*100}%"></div>
+          <div class="late" style="width:${late/total*100}%"></div>
+          <div class="absent" style="width:${absent/total*100}%"></div>
+        `;
+      } else {
+        bar.innerHTML = '';
+      }
+      
+      document.getElementById('studentModal').classList.add('active');
+    }
+    
+    function closeModal() {
+      document.getElementById('studentModal').classList.remove('active');
+    }
+    
+    async function saveStudent() {
+      const id = document.getElementById('editId').value;
+      const data = {
+        number: parseInt(document.getElementById('editNumber').value),
+        name: document.getElementById('editName').value,
+        phone: document.getElementById('editPhone').value,
+        parent_phone: document.getElementById('editParentPhone').value,
+        memo: document.getElementById('editMemo').value
+      };
+      
+      await fetch('/api/students/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      closeModal();
+      loadStudents();
+      showToast('저장되었습니다');
+    }
+    
+    async function deleteStudent() {
+      if (!confirm('정말 삭제하시겠습니까?')) return;
+      
+      const id = document.getElementById('editId').value;
+      await fetch('/api/students/' + id, { method: 'DELETE' });
+      
+      closeModal();
+      loadStudents();
+      showToast('삭제되었습니다');
+    }
+    
+    // ============ 출석 관리 ============
+    
+    function changeDate(delta) {
+      const input = document.getElementById('attendanceDate');
+      const date = new Date(input.value);
+      date.setDate(date.getDate() + delta);
+      input.value = date.toISOString().split('T')[0];
+      loadAttendance();
+    }
+    
+    async function loadAttendance() {
+      const date = document.getElementById('attendanceDate').value;
+      const res = await fetch('/api/attendance/' + date);
+      const data = await res.json();
+      
+      attendance = {};
+      data.forEach(a => attendance[a.student_id] = a.status);
+      
+      renderAttendanceList();
+      updateStats();
+    }
+    
+    function renderAttendanceList() {
+      const container = document.getElementById('attendanceList');
+      
+      if (students.length === 0) {
+        container.innerHTML = `
+          <div class="empty">
+            <div class="icon">📝</div>
+            <div>먼저 학생을 등록해주세요</div>
+          </div>`;
+        return;
+      }
+      
+      container.innerHTML = students.map(s => {
+        const status = attendance[s.id] || '';
+        return `
+          <div class="attendance-item">
+            <div class="student-num">${s.number}</div>
+            <div class="student-name">${s.name}</div>
+            <div class="attendance-btns">
+              <button class="att-btn present ${status === 'present' ? 'active' : ''}" 
+                onclick="setAttendance(${s.id}, 'present')">출석</button>
+              <button class="att-btn late ${status === 'late' ? 'active' : ''}"
+                onclick="setAttendance(${s.id}, 'late')">지각</button>
+              <button class="att-btn absent ${status === 'absent' ? 'active' : ''}"
+                onclick="setAttendance(${s.id}, 'absent')">결석</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+    
+    async function setAttendance(studentId, status) {
+      const date = document.getElementById('attendanceDate').value;
+      
+      await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id: studentId, date, status })
+      });
+      
+      attendance[studentId] = status;
+      renderAttendanceList();
+      updateStats();
+    }
+    
+    function updateStats() {
+      let present = 0, late = 0, absent = 0;
+      
+      Object.values(attendance).forEach(status => {
+        if (status === 'present') present++;
+        else if (status === 'late') late++;
+        else if (status === 'absent') absent++;
+      });
+      
+      document.getElementById('statPresent').textContent = present;
+      document.getElementById('statLate').textContent = late;
+      document.getElementById('statAbsent').textContent = absent;
+    }
+  </script>
+</body>
+</html>
