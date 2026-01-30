@@ -31,6 +31,9 @@
     }
     
     header h1 { font-size: 1.4rem; margin-bottom: 5px; }
+    header .class-name { font-size: 1.1rem; margin-bottom: 3px; cursor: pointer; }
+    header .class-name:hover { text-decoration: underline; }
+    header .device-info { font-size: 0.75rem; opacity: 0.8; margin-bottom: 5px; }
     header .subtitle { opacity: 0.9; font-size: 0.9rem; }
     
     .tab-nav {
@@ -342,7 +345,6 @@
     
     .toast.show { opacity: 1; }
     
-    /* 누가 기록 스타일 */
     .record-section {
       margin-top: 20px;
       padding-top: 20px;
@@ -384,10 +386,7 @@
     .record-type.guidance { background: #fff3e0; color: #f57c00; }
     .record-type.counseling { background: #f3e5f5; color: #7b1fa2; }
     
-    .record-date {
-      font-size: 0.75rem;
-      color: #999;
-    }
+    .record-date { font-size: 0.75rem; color: #999; }
     
     .record-content {
       font-size: 0.9rem;
@@ -422,10 +421,7 @@
       transition: all 0.2s;
     }
     
-    .add-record-btn:hover {
-      border-color: #4A90A4;
-      color: #4A90A4;
-    }
+    .add-record-btn:hover { border-color: #4A90A4; color: #4A90A4; }
     
     .record-form {
       background: #f0f7ff;
@@ -435,29 +431,52 @@
     }
     
     .record-form.hidden { display: none; }
+    .record-form select { margin-bottom: 10px; }
+    .record-form textarea { margin-bottom: 10px; min-height: 100px; }
     
-    .record-form select {
-      margin-bottom: 10px;
-    }
+    .record-form-actions { display: flex; gap: 10px; }
+    .record-form-actions .btn { flex: 1; padding: 10px; }
     
-    .record-form textarea {
-      margin-bottom: 10px;
-      min-height: 100px;
-    }
+    .record-list { max-height: 300px; overflow-y: auto; }
     
-    .record-form-actions {
+    .class-setup-modal { text-align: center; }
+    .class-setup-modal .icon { font-size: 4rem; margin-bottom: 15px; }
+    .class-setup-modal p { color: #666; margin-bottom: 15px; font-size: 0.9rem; }
+    
+    .class-input-row {
       display: flex;
+      align-items: center;
+      justify-content: center;
       gap: 10px;
+      margin-bottom: 20px;
     }
     
-    .record-form-actions .btn {
-      flex: 1;
+    .class-input-row input[type="number"] {
+      width: 70px;
+      text-align: center;
+      font-size: 1.2rem;
       padding: 10px;
     }
     
-    .record-list {
-      max-height: 300px;
-      overflow-y: auto;
+    .class-input-row span { font-size: 1.2rem; color: #333; }
+    
+    .device-detected {
+      background: #e8f5e9;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      color: #2e7d32;
+    }
+    
+    .device-detected .label {
+      font-size: 0.75rem;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    .device-detected .value {
+      font-weight: bold;
     }
     
     @media (max-width: 400px) {
@@ -469,7 +488,9 @@
 <body>
   <div class="app">
     <header>
-      <h1>🏫 우리반 학급 관리</h1>
+      <h1>🏫 학급 관리</h1>
+      <div class="class-name" id="classNameDisplay" onclick="openClassSetup()">학급을 설정해주세요</div>
+      <div class="device-info" id="deviceInfoDisplay"></div>
       <div class="subtitle">총 <span id="totalCount">0</span>명</div>
     </header>
     
@@ -536,6 +557,29 @@
     </nav>
   </div>
   
+  <!-- 학급 설정 모달 -->
+  <div class="modal-overlay" id="classSetupModal">
+    <div class="modal class-setup-modal">
+      <div class="icon">🏫</div>
+      <h2>학급 설정</h2>
+      
+      <div class="device-detected">
+        <div class="label">📱 감지된 기기</div>
+        <div class="value" id="detectedDevice">-</div>
+      </div>
+      
+      <p>학년과 반을 입력해주세요</p>
+      <div class="class-input-row">
+        <input type="number" id="gradeInput" min="1" max="6" placeholder="0">
+        <span>학년</span>
+        <input type="number" id="classInput" min="1" max="20" placeholder="0">
+        <span>반</span>
+      </div>
+      
+      <button class="btn btn-primary" onclick="saveClassSetup()">확인</button>
+    </div>
+  </div>
+  
   <!-- 학생 상세 모달 -->
   <div class="modal-overlay" id="studentModal">
     <div class="modal">
@@ -564,7 +608,6 @@
         <textarea id="editMemo" placeholder="특이사항, 알레르기 등"></textarea>
       </div>
       
-      <!-- 출결 현황 -->
       <div class="attendance-stats-section">
         <h3>📊 출결 현황</h3>
         <div class="mini-stats">
@@ -584,14 +627,12 @@
         <div class="attendance-bar" id="modalBar"></div>
       </div>
       
-      <!-- 누가 기록 -->
       <div class="record-section">
         <h3>
           📝 누가 기록
           <span id="recordCount" style="font-weight:normal; color:#4A90A4;">0건</span>
         </h3>
         
-        <!-- 기록 추가 폼 -->
         <div class="record-form hidden" id="recordForm">
           <select id="recordType">
             <option value="behavior">학생행동특이사항</option>
@@ -607,7 +648,6 @@
         
         <button class="add-record-btn" id="addRecordBtn" onclick="showRecordForm()">+ 새 기록 추가</button>
         
-        <!-- 기록 목록 -->
         <div class="record-list" id="recordList"></div>
       </div>
       
@@ -625,6 +665,8 @@
     let students = [];
     let attendance = {};
     let currentStudentId = null;
+    let classId = null;
+    let deviceModel = null;
     
     const TYPE_LABELS = {
       behavior: '학생행동특이사항',
@@ -632,14 +674,154 @@
       counseling: '상담내용'
     };
     
+    // 기기 모델 감지
+    function detectDevice() {
+      const ua = navigator.userAgent;
+      const platform = navigator.platform || '';
+      const vendor = navigator.vendor || '';
+      
+      let device = 'Unknown';
+      let os = 'Unknown';
+      let browser = 'Unknown';
+      
+      // OS 감지
+      if (/iPhone/.test(ua)) {
+        os = 'iPhone';
+        const match = ua.match(/iPhone OS (\d+_\d+)/);
+        if (match) os += ' iOS' + match[1].replace('_', '.');
+      } else if (/iPad/.test(ua)) {
+        os = 'iPad';
+        const match = ua.match(/OS (\d+_\d+)/);
+        if (match) os += ' iOS' + match[1].replace('_', '.');
+      } else if (/Android/.test(ua)) {
+        os = 'Android';
+        const match = ua.match(/Android (\d+\.?\d*)/);
+        if (match) os += ' ' + match[1];
+        // Android 기기 모델 추출
+        const modelMatch = ua.match(/;\s*([^;]+)\s*Build/);
+        if (modelMatch) device = modelMatch[1].trim();
+      } else if (/Windows NT/.test(ua)) {
+        os = 'Windows';
+        if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+        else if (/Windows NT 6.3/.test(ua)) os = 'Windows 8.1';
+        else if (/Windows NT 6.2/.test(ua)) os = 'Windows 8';
+        else if (/Windows NT 6.1/.test(ua)) os = 'Windows 7';
+      } else if (/Mac OS X/.test(ua)) {
+        os = 'macOS';
+        const match = ua.match(/Mac OS X (\d+[._]\d+)/);
+        if (match) os += ' ' + match[1].replace('_', '.');
+      } else if (/Linux/.test(ua)) {
+        os = 'Linux';
+      } else if (/CrOS/.test(ua)) {
+        os = 'ChromeOS';
+      }
+      
+      // 브라우저 감지
+      if (/Edg\//.test(ua)) browser = 'Edge';
+      else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = 'Chrome';
+      else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+      else if (/Firefox\//.test(ua)) browser = 'Firefox';
+      else if (/MSIE|Trident/.test(ua)) browser = 'IE';
+      
+      // 최종 기기 문자열 생성
+      if (device !== 'Unknown') {
+        return `${device} (${os})`;
+      } else if (os.includes('iPhone') || os.includes('iPad')) {
+        return os;
+      } else {
+        return `${os} - ${browser}`;
+      }
+    }
+    
+    // 기기 ID 생성 (기기 정보 해시)
+    function generateDeviceId() {
+      const ua = navigator.userAgent;
+      const screen = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const lang = navigator.language;
+      
+      // 간단한 해시 생성
+      const str = ua + screen + timezone + lang;
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(36);
+    }
+    
+    // 저장된 설정 로드
+    function getConfig() {
+      return {
+        grade: localStorage.getItem('tc_grade'),
+        classNum: localStorage.getItem('tc_class')
+      };
+    }
+    
+    // 설정 저장
+    function setConfig(grade, classNum) {
+      localStorage.setItem('tc_grade', grade);
+      localStorage.setItem('tc_class', classNum);
+    }
+    
+    // 학급 ID 생성 (기기ID + 학년 + 반)
+    function generateClassId(grade, classNum, deviceId) {
+      return `${deviceId}_${grade}_${classNum}`;
+    }
+    
     document.addEventListener('DOMContentLoaded', () => {
-      loadStudents();
+      // 기기 감지
+      deviceModel = detectDevice();
+      const deviceId = generateDeviceId();
+      
+      document.getElementById('detectedDevice').textContent = deviceModel;
+      document.getElementById('deviceInfoDisplay').textContent = `📱 ${deviceModel}`;
+      
+      const { grade, classNum } = getConfig();
+      
+      if (grade && classNum) {
+        classId = generateClassId(grade, classNum, deviceId);
+        document.getElementById('classNameDisplay').textContent = `${grade}학년 ${classNum}반`;
+        loadStudents();
+      } else {
+        document.getElementById('classSetupModal').classList.add('active');
+      }
+      
       document.getElementById('attendanceDate').value = getToday();
       
       document.getElementById('addName').addEventListener('keypress', e => {
         if (e.key === 'Enter') addStudent();
       });
     });
+    
+    function openClassSetup() {
+      const { grade, classNum } = getConfig();
+      document.getElementById('gradeInput').value = grade || '';
+      document.getElementById('classInput').value = classNum || '';
+      document.getElementById('detectedDevice').textContent = deviceModel;
+      document.getElementById('classSetupModal').classList.add('active');
+    }
+    
+    function saveClassSetup() {
+      const grade = parseInt(document.getElementById('gradeInput').value);
+      const classNum = parseInt(document.getElementById('classInput').value);
+      
+      if (!grade || !classNum || grade < 1 || classNum < 1) {
+        alert('학년과 반을 올바르게 입력해주세요');
+        return;
+      }
+      
+      setConfig(grade, classNum);
+      const deviceId = generateDeviceId();
+      classId = generateClassId(grade, classNum, deviceId);
+      
+      document.getElementById('classNameDisplay').textContent = `${grade}학년 ${classNum}반`;
+      document.getElementById('classSetupModal').classList.remove('active');
+      
+      loadStudents();
+      showToast('설정이 저장되었습니다');
+    }
     
     function getToday() {
       return new Date().toISOString().split('T')[0];
@@ -665,8 +847,10 @@
     // ============ 학생 관리 ============
     
     async function loadStudents() {
+      if (!classId) return;
+      
       try {
-        const res = await fetch('/api/students');
+        const res = await fetch('/api/students?device_id=' + encodeURIComponent(classId));
         students = await res.json();
         document.getElementById('totalCount').textContent = students.length;
         renderStudentList();
@@ -699,6 +883,11 @@
     }
     
     async function addStudent() {
+      if (!classId) {
+        alert('먼저 학급을 설정해주세요');
+        return;
+      }
+      
       const number = parseInt(document.getElementById('addNumber').value);
       const name = document.getElementById('addName').value.trim();
       
@@ -710,20 +899,20 @@
       await fetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number, name })
+        body: JSON.stringify({ device_id: classId, number, name })
       });
       
       document.getElementById('addNumber').value = '';
       document.getElementById('addName').value = '';
       document.getElementById('addNumber').focus();
-      loadStudents();
+      await loadStudents();
       showToast('학생이 추가되었습니다');
     }
     
     async function openStudent(id) {
       currentStudentId = id;
       
-      const res = await fetch('/api/students/' + id);
+      const res = await fetch('/api/students/' + id + '?device_id=' + encodeURIComponent(classId));
       const s = await res.json();
       
       document.getElementById('editId').value = s.id;
@@ -733,15 +922,14 @@
       document.getElementById('editParentPhone').value = s.parent_phone || '';
       document.getElementById('editMemo').value = s.memo || '';
       
-      // 출결 통계
-      const statsRes = await fetch('/api/attendance/stats/' + id);
+      const statsRes = await fetch('/api/attendance/stats/' + id + '?device_id=' + encodeURIComponent(classId));
       const statsData = await statsRes.json();
       
       let present = 0, late = 0, absent = 0;
       statsData.forEach(s => {
-        if (s.status === 'present') present = s.count;
-        else if (s.status === 'late') late = s.count;
-        else if (s.status === 'absent') absent = s.count;
+        if (s.status === 'present') present = parseInt(s.count);
+        else if (s.status === 'late') late = parseInt(s.count);
+        else if (s.status === 'absent') absent = parseInt(s.count);
       });
       
       document.getElementById('modalPresent').textContent = present;
@@ -760,10 +948,7 @@
         bar.innerHTML = '';
       }
       
-      // 누가 기록 로드
       await loadRecords(id);
-      
-      // 폼 초기화
       hideRecordForm();
       
       document.getElementById('studentModal').classList.add('active');
@@ -777,6 +962,7 @@
     async function saveStudent() {
       const id = document.getElementById('editId').value;
       const data = {
+        device_id: classId,
         number: parseInt(document.getElementById('editNumber').value),
         name: document.getElementById('editName').value,
         phone: document.getElementById('editPhone').value,
@@ -791,7 +977,7 @@
       });
       
       closeModal();
-      loadStudents();
+      await loadStudents();
       showToast('저장되었습니다');
     }
     
@@ -799,10 +985,10 @@
       if (!confirm('정말 삭제하시겠습니까?\n관련된 모든 기록도 삭제됩니다.')) return;
       
       const id = document.getElementById('editId').value;
-      await fetch('/api/students/' + id, { method: 'DELETE' });
+      await fetch('/api/students/' + id + '?device_id=' + encodeURIComponent(classId), { method: 'DELETE' });
       
       closeModal();
-      loadStudents();
+      await loadStudents();
       showToast('삭제되었습니다');
     }
     
@@ -817,8 +1003,10 @@
     }
     
     async function loadAttendance() {
+      if (!classId) return;
+      
       const date = document.getElementById('attendanceDate').value;
-      const res = await fetch('/api/attendance/' + date);
+      const res = await fetch('/api/attendance/' + date + '?device_id=' + encodeURIComponent(classId));
       const data = await res.json();
       
       attendance = {};
@@ -864,7 +1052,7 @@
       await fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_id: studentId, date, status })
+        body: JSON.stringify({ device_id: classId, student_id: studentId, date, status })
       });
       
       attendance[studentId] = status;
@@ -886,10 +1074,10 @@
       document.getElementById('statAbsent').textContent = absent;
     }
     
-    // ============ 누가 기록 관리 ============
+    // ============ 누가 기록 ============
     
     async function loadRecords(studentId) {
-      const res = await fetch('/api/records/' + studentId);
+      const res = await fetch('/api/records/' + studentId + '?device_id=' + encodeURIComponent(classId));
       const records = await res.json();
       
       document.getElementById('recordCount').textContent = records.length + '건';
@@ -945,6 +1133,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          device_id: classId,
           student_id: currentStudentId,
           type,
           content
@@ -959,7 +1148,7 @@
     async function deleteRecord(id) {
       if (!confirm('이 기록을 삭제하시겠습니까?')) return;
       
-      await fetch('/api/records/' + id, { method: 'DELETE' });
+      await fetch('/api/records/' + id + '?device_id=' + encodeURIComponent(classId), { method: 'DELETE' });
       await loadRecords(currentStudentId);
       showToast('기록이 삭제되었습니다');
     }
