@@ -454,6 +454,16 @@
     
     .record-list { max-height: 300px; overflow-y: auto; }
     
+    .record-form-tab {
+      background: #f0f7ff;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+    
+    .record-form-tab .form-group { margin-bottom: 12px; }
+    .record-form-tab textarea { min-height: 80px; }
+    
     .class-setup-modal { text-align: center; }
     .class-setup-modal .icon { font-size: 4rem; margin-bottom: 15px; }
     .class-setup-modal p { color: #666; margin-bottom: 15px; font-size: 0.9rem; }
@@ -559,6 +569,40 @@
       </div>
     </div>
     
+    <div id="tab-records" class="tab-content">
+      <div class="card">
+        <h2>📝 누가 기록</h2>
+        
+        <!-- 학생 선택 -->
+        <div class="form-group">
+          <label>학생 선택</label>
+          <select id="recordStudentSelect" onchange="loadRecordsTab()">
+            <option value="">-- 학생을 선택하세요 --</option>
+          </select>
+        </div>
+        
+        <!-- 기록 추가 폼 -->
+        <div class="record-form-tab" id="recordFormTab" style="display:none;">
+          <div class="form-group">
+            <label>기록 유형</label>
+            <select id="recordTypeTab">
+              <option value="behavior">학생행동특이사항</option>
+              <option value="guidance">교사지도내용</option>
+              <option value="counseling">상담내용</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>내용</label>
+            <textarea id="recordContentTab" placeholder="내용을 입력하세요"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveRecordTab()">기록 저장</button>
+        </div>
+        
+        <!-- 기록 목록 -->
+        <div id="recordsListTab" style="margin-top:15px;"></div>
+      </div>
+    </div>
+    
     <nav class="tab-nav">
       <button class="tab-btn active" onclick="switchTab('students')">
         <span class="icon">👥</span>
@@ -567,6 +611,10 @@
       <button class="tab-btn" onclick="switchTab('attendance')">
         <span class="icon">✅</span>
         출석
+      </button>
+      <button class="tab-btn" onclick="switchTab('records')">
+        <span class="icon">📝</span>
+        누가기록
       </button>
     </nav>
   </div>
@@ -639,30 +687,6 @@
           </div>
         </div>
         <div class="attendance-bar" id="modalBar"></div>
-      </div>
-      
-      <div class="record-section">
-        <h3>
-          📝 누가 기록
-          <span id="recordCount" style="font-weight:normal; color:#4A90A4;">0건</span>
-        </h3>
-        
-        <div class="record-form hidden" id="recordForm">
-          <select id="recordType">
-            <option value="behavior">학생행동특이사항</option>
-            <option value="guidance">교사지도내용</option>
-            <option value="counseling">상담내용</option>
-          </select>
-          <textarea id="recordContent" placeholder="내용을 입력하세요"></textarea>
-          <div class="record-form-actions">
-            <button class="btn btn-secondary" onclick="hideRecordForm()">취소</button>
-            <button class="btn btn-primary" onclick="saveRecord()">저장</button>
-          </div>
-        </div>
-        
-        <button class="add-record-btn" id="addRecordBtn" onclick="showRecordForm()">+ 새 기록 추가</button>
-        
-        <div class="record-list" id="recordList"></div>
       </div>
       
       <div class="modal-actions">
@@ -850,6 +874,93 @@
       event.target.closest('.tab-btn').classList.add('active');
       
       if (tab === 'attendance') loadAttendance();
+      if (tab === 'records') initRecordsTab();
+    }
+    
+    // ============ 누가 기록 탭 ============
+    
+    function initRecordsTab() {
+      const select = document.getElementById('recordStudentSelect');
+      select.innerHTML = '<option value="">-- 학생을 선택하세요 --</option>';
+      
+      students.forEach(s => {
+        select.innerHTML += `<option value="${s.id}">${s.number}번 ${s.name}</option>`;
+      });
+      
+      document.getElementById('recordFormTab').style.display = 'none';
+      document.getElementById('recordsListTab').innerHTML = '<div style="text-align:center; color:#888; padding:20px;">학생을 선택해주세요</div>';
+    }
+    
+    async function loadRecordsTab() {
+      const studentId = document.getElementById('recordStudentSelect').value;
+      
+      if (!studentId) {
+        document.getElementById('recordFormTab').style.display = 'none';
+        document.getElementById('recordsListTab').innerHTML = '<div style="text-align:center; color:#888; padding:20px;">학생을 선택해주세요</div>';
+        return;
+      }
+      
+      document.getElementById('recordFormTab').style.display = 'block';
+      
+      const res = await fetch('/api/records/' + studentId + '?device_id=' + encodeURIComponent(classId));
+      const records = await res.json();
+      
+      const container = document.getElementById('recordsListTab');
+      
+      if (records.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">기록이 없습니다</div>';
+        return;
+      }
+      
+      container.innerHTML = records.map(r => `
+        <div class="record-item">
+          <button class="record-delete" onclick="deleteRecordTab(${r.id})" title="삭제">×</button>
+          <div class="record-header">
+            <span class="record-type ${r.type}">${TYPE_LABELS[r.type]}</span>
+            <span class="record-date">${r.created_at}</span>
+          </div>
+          <div class="record-content">${escapeHtml(r.content)}</div>
+        </div>
+      `).join('');
+    }
+    
+    async function saveRecordTab() {
+      const studentId = document.getElementById('recordStudentSelect').value;
+      const type = document.getElementById('recordTypeTab').value;
+      const content = document.getElementById('recordContentTab').value.trim();
+      
+      if (!studentId) {
+        alert('학생을 선택해주세요');
+        return;
+      }
+      
+      if (!content) {
+        alert('내용을 입력해주세요');
+        return;
+      }
+      
+      await fetch('/api/records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          device_id: classId,
+          student_id: studentId,
+          type,
+          content
+        })
+      });
+      
+      document.getElementById('recordContentTab').value = '';
+      await loadRecordsTab();
+      showToast('기록이 저장되었습니다');
+    }
+    
+    async function deleteRecordTab(id) {
+      if (!confirm('이 기록을 삭제하시겠습니까?')) return;
+      
+      await fetch('/api/records/' + id + '?device_id=' + encodeURIComponent(classId), { method: 'DELETE' });
+      await loadRecordsTab();
+      showToast('기록이 삭제되었습니다');
     }
     
     // ============ 학생 관리 ============
@@ -966,9 +1077,6 @@
       } else {
         bar.innerHTML = '';
       }
-      
-      await loadRecords(id);
-      hideRecordForm();
       
       document.getElementById('studentModal').classList.add('active');
     }
@@ -1114,81 +1222,10 @@
     
     // ============ 누가 기록 ============
     
-    async function loadRecords(studentId) {
-      const res = await fetch('/api/records/' + studentId + '?device_id=' + encodeURIComponent(classId));
-      const records = await res.json();
-      
-      document.getElementById('recordCount').textContent = records.length + '건';
-      
-      const container = document.getElementById('recordList');
-      
-      if (records.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#888; padding:20px; font-size:0.9rem;">기록이 없습니다</div>';
-        return;
-      }
-      
-      container.innerHTML = records.map(r => `
-        <div class="record-item">
-          <button class="record-delete" onclick="deleteRecord(${r.id})" title="삭제">×</button>
-          <div class="record-header">
-            <span class="record-type ${r.type}">${TYPE_LABELS[r.type]}</span>
-            <span class="record-date">${r.created_at}</span>
-          </div>
-          <div class="record-content">${escapeHtml(r.content)}</div>
-        </div>
-      `).join('');
-    }
-    
     function escapeHtml(text) {
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
-    }
-    
-    function showRecordForm() {
-      document.getElementById('recordForm').classList.remove('hidden');
-      document.getElementById('addRecordBtn').style.display = 'none';
-      document.getElementById('recordContent').focus();
-    }
-    
-    function hideRecordForm() {
-      document.getElementById('recordForm').classList.add('hidden');
-      document.getElementById('addRecordBtn').style.display = 'block';
-      document.getElementById('recordType').value = 'behavior';
-      document.getElementById('recordContent').value = '';
-    }
-    
-    async function saveRecord() {
-      const type = document.getElementById('recordType').value;
-      const content = document.getElementById('recordContent').value.trim();
-      
-      if (!content) {
-        alert('내용을 입력해주세요');
-        return;
-      }
-      
-      await fetch('/api/records', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          device_id: classId,
-          student_id: currentStudentId,
-          type,
-          content
-        })
-      });
-      
-      hideRecordForm();
-      await loadRecords(currentStudentId);
-      showToast('기록이 저장되었습니다');
-    }
-    
-    async function deleteRecord(id) {
-      if (!confirm('이 기록을 삭제하시겠습니까?')) return;
-      
-      await fetch('/api/records/' + id + '?device_id=' + encodeURIComponent(classId), { method: 'DELETE' });
-      await loadRecords(currentStudentId);
-      showToast('기록이 삭제되었습니다');
     }
   </script>
 </body>
