@@ -30,9 +30,15 @@ async function initDatabase() {
         student_id INTEGER NOT NULL,
         date TEXT NOT NULL,
         status TEXT NOT NULL,
+        reason TEXT,
         UNIQUE(device_id, student_id, date)
       )
     `);
+    
+    // reason 컬럼 추가 (기존 테이블용)
+    await client.query(`
+      ALTER TABLE attendance ADD COLUMN IF NOT EXISTS reason TEXT
+    `).catch(() => {});
     
     // 누가 기록 테이블
     await client.query(`

@@ -101,7 +101,7 @@ app.get('/api/attendance/:date', async (req, res) => {
     const { device_id } = req.query;
     const pool = getPool();
     const result = await pool.query(
-      'SELECT * FROM attendance WHERE date = $1 AND device_id = $2',
+      'SELECT student_id, status, reason FROM attendance WHERE date = $1 AND device_id = $2',
       [req.params.date, device_id]
     );
     res.json(result.rows);
@@ -113,16 +113,16 @@ app.get('/api/attendance/:date', async (req, res) => {
 // 출석 저장
 app.post('/api/attendance', async (req, res) => {
   try {
-    const { device_id, student_id, date, status } = req.body;
+    const { device_id, student_id, date, status, reason } = req.body;
     const pool = getPool();
     
     // UPSERT
     await pool.query(`
-      INSERT INTO attendance (device_id, student_id, date, status)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO attendance (device_id, student_id, date, status, reason)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (device_id, student_id, date)
-      DO UPDATE SET status = $4
-    `, [device_id, student_id, date, status]);
+      DO UPDATE SET status = $4, reason = $5
+    `, [device_id, student_id, date, status, reason || '']);
     
     res.json({ message: '저장 완료' });
   } catch (error) {

@@ -476,6 +476,67 @@
       color: #333;
     }
     
+    .absent-modal {
+      text-align: left;
+    }
+    
+    .absent-modal h2 {
+      text-align: center;
+    }
+    
+    .absent-type-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .absent-type-btn {
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    
+    .absent-type-btn:hover { border-color: #4A90A4; }
+    
+    .absent-type-btn.active {
+      background: #e74c3c;
+      color: white;
+      border-color: #e74c3c;
+    }
+    
+    .absent-type-btn.illness.active { background: #3498db; border-color: #3498db; }
+    .absent-type-btn.unexcused.active { background: #e74c3c; border-color: #e74c3c; }
+    .absent-type-btn.other.active { background: #9b59b6; border-color: #9b59b6; }
+    .absent-type-btn.excused.active { background: #27ae60; border-color: #27ae60; }
+    
+    .absent-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 8px;
+      margin-left: 5px;
+    }
+    
+    .absent-badge.illness { background: #3498db; color: white; }
+    .absent-badge.unexcused { background: #e74c3c; color: white; }
+    .absent-badge.other { background: #9b59b6; color: white; }
+    .absent-badge.excused { background: #27ae60; color: white; }
+    
+    .reason-preview {
+      font-size: 0.7rem;
+      color: #888;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 150px;
+    }
+    
     .class-setup-modal { text-align: center; }
     .class-setup-modal .icon { font-size: 4rem; margin-bottom: 15px; }
     .class-setup-modal p { color: #666; margin-bottom: 15px; font-size: 0.9rem; }
@@ -750,6 +811,34 @@
   </div>
   
   <div class="toast" id="toast"></div>
+  
+  <!-- 결석 사유 모달 -->
+  <div class="modal-overlay" id="absentModal">
+    <div class="modal absent-modal">
+      <h2>결석 처리</h2>
+      <p style="text-align:center; margin-bottom:15px;" id="absentStudentName">-</p>
+      
+      <div class="form-group">
+        <label>결석 유형</label>
+        <div class="absent-type-btns">
+          <button class="absent-type-btn illness" onclick="selectAbsentType('illness')">🏥 질병</button>
+          <button class="absent-type-btn unexcused" onclick="selectAbsentType('unexcused')">❌ 미인정</button>
+          <button class="absent-type-btn other" onclick="selectAbsentType('other')">📋 기타</button>
+          <button class="absent-type-btn excused" onclick="selectAbsentType('excused')">✅ 인정</button>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>결석 사유</label>
+        <textarea id="absentReason" placeholder="결석 사유를 입력하세요"></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeAbsentModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveAbsent()">저장</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     let students = [];
@@ -757,6 +846,17 @@
     let currentStudentId = null;
     let classId = null;
     let deviceModel = null;
+    
+    // 결석 모달용 변수
+    let absentStudentId = null;
+    let selectedAbsentType = null;
+    
+    const ABSENT_TYPE_LABELS = {
+      illness: '질병',
+      unexcused: '미인정',
+      other: '기타',
+      excused: '인정'
+    };
     
     const TYPE_LABELS = {
       behavior: '학생행동특이사항',
@@ -1263,7 +1363,12 @@
       const data = await res.json();
       
       attendance = {};
-      data.forEach(a => attendance[a.student_id] = a.status);
+      data.forEach(a => {
+        attendance[a.student_id] = {
+          status: a.status,
+          reason: a.reason || ''
+        };
+      });
       
       renderAttendanceList();
       updateStats();
@@ -1282,18 +1387,35 @@
       }
       
       container.innerHTML = students.map(s => {
-        const status = attendance[s.id] || '';
+        const att = attendance[s.id] || {};
+        const status = att.status || '';
+        const reason = att.reason || '';
+        const isAbsent = status.startsWith('absent');
+        const absentType = isAbsent ? status.replace('absent_', '') : '';
+        
+        let absentBadge = '';
+        let reasonPreview = '';
+        if (isAbsent && absentType) {
+          absentBadge = `<span class="absent-badge ${absentType}">${ABSENT_TYPE_LABELS[absentType] || ''}</span>`;
+          if (reason) {
+            reasonPreview = `<div class="reason-preview">📋 ${reason}</div>`;
+          }
+        }
+        
         return `
           <div class="attendance-item">
             <div class="student-num">${s.number}</div>
-            <div class="student-name">${s.name}</div>
+            <div style="flex:1;">
+              <div class="student-name">${s.name}${absentBadge}</div>
+              ${reasonPreview}
+            </div>
             <div class="attendance-btns">
               <button class="att-btn present ${status === 'present' ? 'active' : ''}" 
                 onclick="setAttendance(${s.id}, 'present')">출석</button>
               <button class="att-btn late ${status === 'late' ? 'active' : ''}"
                 onclick="setAttendance(${s.id}, 'late')">지각</button>
-              <button class="att-btn absent ${status === 'absent' ? 'active' : ''}"
-                onclick="setAttendance(${s.id}, 'absent')">결석</button>
+              <button class="att-btn absent ${isAbsent ? 'active' : ''}"
+                onclick="openAbsentModal(${s.id}, '${s.name}')">결석</button>
             </div>
           </div>`;
       }).join('');
@@ -1305,21 +1427,86 @@
       await fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device_id: classId, student_id: studentId, date, status })
+        body: JSON.stringify({ device_id: classId, student_id: studentId, date, status, reason: '' })
       });
       
-      attendance[studentId] = status;
+      attendance[studentId] = { status, reason: '' };
       renderAttendanceList();
       updateStats();
+    }
+    
+    // 결석 모달
+    function openAbsentModal(studentId, studentName) {
+      absentStudentId = studentId;
+      selectedAbsentType = null;
+      
+      document.getElementById('absentStudentName').textContent = studentName;
+      document.getElementById('absentReason').value = '';
+      
+      // 기존 선택 초기화
+      document.querySelectorAll('.absent-type-btn').forEach(btn => btn.classList.remove('active'));
+      
+      // 기존 결석 정보 불러오기
+      const att = attendance[studentId];
+      if (att && att.status && att.status.startsWith('absent_')) {
+        const type = att.status.replace('absent_', '');
+        selectedAbsentType = type;
+        document.querySelector(`.absent-type-btn.${type}`)?.classList.add('active');
+        document.getElementById('absentReason').value = att.reason || '';
+      }
+      
+      document.getElementById('absentModal').classList.add('active');
+    }
+    
+    function closeAbsentModal() {
+      document.getElementById('absentModal').classList.remove('active');
+      absentStudentId = null;
+      selectedAbsentType = null;
+    }
+    
+    function selectAbsentType(type) {
+      selectedAbsentType = type;
+      document.querySelectorAll('.absent-type-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`.absent-type-btn.${type}`).classList.add('active');
+    }
+    
+    async function saveAbsent() {
+      if (!selectedAbsentType) {
+        alert('결석 유형을 선택해주세요');
+        return;
+      }
+      
+      const reason = document.getElementById('absentReason').value.trim();
+      const date = document.getElementById('attendanceDate').value;
+      const status = 'absent_' + selectedAbsentType;
+      
+      await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          device_id: classId, 
+          student_id: absentStudentId, 
+          date, 
+          status,
+          reason 
+        })
+      });
+      
+      attendance[absentStudentId] = { status, reason };
+      closeAbsentModal();
+      renderAttendanceList();
+      updateStats();
+      showToast('결석 처리되었습니다');
     }
     
     function updateStats() {
       let present = 0, late = 0, absent = 0;
       
-      Object.values(attendance).forEach(status => {
+      Object.values(attendance).forEach(att => {
+        const status = att.status || att;
         if (status === 'present') present++;
         else if (status === 'late') late++;
-        else if (status === 'absent') absent++;
+        else if (status.startsWith('absent')) absent++;
       });
       
       document.getElementById('statPresent').textContent = present;
