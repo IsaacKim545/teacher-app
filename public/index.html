@@ -1266,7 +1266,7 @@
       statsData.forEach(s => {
         if (s.status === 'present') present = parseInt(s.count);
         else if (s.status === 'late') late = parseInt(s.count);
-        else if (s.status === 'absent') absent = parseInt(s.count);
+        else if (s.status.startsWith('absent')) absent += parseInt(s.count);
       });
       
       document.getElementById('modalPresent').textContent = present;
