@@ -65,9 +65,15 @@ async function initDatabase() {
         result TEXT,
         follow_up TEXT,
         next_date TEXT,
-        is_completed BOOLEAN DEFAULT false
+        is_completed BOOLEAN DEFAULT false,
+        created_at TEXT
       )
     `);
+
+    // created_at 컬럼 추가 (기존 테이블용)
+    await client.query(`
+      ALTER TABLE counseling ADD COLUMN IF NOT EXISTS created_at TEXT
+    `).catch(() => {});
     
     console.log('데이터베이스 테이블 준비 완료');
   } finally {

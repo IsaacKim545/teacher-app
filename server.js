@@ -284,11 +284,14 @@ app.post('/api/counseling', async (req, res) => {
     if (!device_id || !student_id || !counsel_type || !topic || !content) {
       return res.status(400).json({ error: '필수 항목을 입력해주세요' });
     }
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const created_at = koreaTime.toISOString().replace('T', ' ').substring(0, 19);
     const pool = getPool();
     const dbResult = await pool.query(
-      `INSERT INTO counseling (device_id, student_id, date, counsel_type, topic, content, result, follow_up, next_date, is_completed)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false) RETURNING id`,
-      [device_id, student_id, date, counsel_type, topic, content, result || '', follow_up || '', next_date || null]
+      `INSERT INTO counseling (device_id, student_id, date, counsel_type, topic, content, result, follow_up, next_date, is_completed, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10) RETURNING id`,
+      [device_id, student_id, date, counsel_type, topic, content, result || '', follow_up || '', next_date || null, created_at]
     );
     res.json({ id: dbResult.rows[0].id });
   } catch (error) {
