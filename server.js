@@ -346,14 +346,42 @@ app.get('/api/dashboard', async (req, res) => {
     const { device_id } = req.query;
     if (!device_id) return res.status(400).json({ error: 'device_id 필요' });
     const pool = getPool();
+
+    // 전체 학생 수
     const students = await pool.query('SELECT COUNT(*) as count FROM students WHERE device_id = $1', [device_id]);
+    const totalStudents = parseInt(students.rows[0].count);
+
+    // 오늘 출석 현황 (한국 시간)
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const today = koreaTime.toISOString().split('T')[0];
+    const attendance = await pool.query(
+      'SELECT status, COUNT(*) as count FROM attendance WHERE device_id = $1 AND date = $2 GROUP BY status',
+      [device_id, today]
+    );
+
+    // 이번 주 상담 수
+    const dayOfWeek = koreaTime.getDay();
+    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const monday = new Date(koreaTime);
+    monday.setDate(monday.getDate() - mondayOffset);
+    const mondayStr = monday.toISOString().split('T')[0];
+    const weeklyCounseling = await pool.query(
+      'SELECT COUNT(*) as count FROM counseling WHERE device_id = $1 AND date >= $2',
+      [device_id, mondayStr]
+    );
+
+    // 후속조치 필요
     const pending = await pool.query(
       `SELECT COUNT(*) as count FROM counseling WHERE device_id = $1 AND follow_up IS NOT NULL AND follow_up != '' AND is_completed = false`,
       [device_id]
     );
+
     res.json({
-      student_count: parseInt(students.rows[0].count),
-      pending_counseling: parseInt(pending.rows[0].count),
+      totalStudents,
+      attendance: attendance.rows,
+      weeklyCounseling: parseInt(weeklyCounseling.rows[0].count),
+      pendingFollowUps: parseInt(pending.rows[0].count),
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
