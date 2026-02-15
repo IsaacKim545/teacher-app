@@ -52,6 +52,23 @@ async function initDatabase() {
       )
     `);
     
+    // 상담 테이블
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS counseling (
+        id SERIAL PRIMARY KEY,
+        device_id TEXT NOT NULL,
+        student_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        counsel_type TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        content TEXT NOT NULL,
+        result TEXT,
+        follow_up TEXT,
+        next_date TEXT,
+        is_completed BOOLEAN DEFAULT false
+      )
+    `);
+    
     console.log('데이터베이스 테이블 준비 완료');
   } finally {
     client.release();
