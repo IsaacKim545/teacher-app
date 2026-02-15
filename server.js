@@ -199,6 +199,167 @@ app.delete('/api/records/:id', async (req, res) => {
   }
 });
 
+// 기록 수정
+app.put('/api/records/:id', async (req, res) => {
+  try {
+    const { device_id, type, content } = req.body;
+    const pool = getPool();
+    await pool.query(
+      'UPDATE records SET type=$1, content=$2 WHERE id=$3 AND device_id=$4',
+      [type, content, req.params.id, device_id]
+    );
+    res.json({ message: '수정 완료' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============ 일괄 출석 API ============
+
+app.post('/api/attendance/bulk', async (req, res) => {
+  try {
+    const { device_id, date, student_ids, status } = req.body;
+    const pool = getPool();
+    for (const student_id of student_ids) {
+      await pool.query(`
+        INSERT INTO attendance (device_id, student_id, date, status, reason)
+        VALUES ($1, $2, $3, $4, '')
+        ON CONFLICT (device_id, student_id, date)
+        DO UPDATE SET status = $4, reason = ''
+      `, [device_id, student_id, date, status]);
+    }
+    res.json({ message: '일괄 저장 완료' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============ 상담 API ============
+
+// 상담 전체 조회
+app.get('/api/counseling', async (req, res) => {
+  try {
+    const { device_id, pending } = req.query;
+    if (!device_id) return res.status(400).json({ error: 'device_id 필요' });
+    const pool = getPool();
+    let query = `
+      SELECT c.*, s.name as student_name, s.number as student_number
+      FROM counseling c
+      LEFT JOIN students s ON c.student_id = s.id
+      WHERE c.device_id = $1
+    `;
+    if (pending === 'true') {
+      query += ` AND c.follow_up IS NOT NULL AND c.follow_up != '' AND c.is_completed = false`;
+    }
+    query += ' ORDER BY c.date DESC, c.id DESC';
+    const result = await pool.query(query, [device_id]);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 학생별 상담 조회
+app.get('/api/counseling/:student_id', async (req, res) => {
+  try {
+    const { device_id } = req.query;
+    const pool = getPool();
+    const result = await pool.query(`
+      SELECT c.*, s.name as student_name, s.number as student_number
+      FROM counseling c
+      LEFT JOIN students s ON c.student_id = s.id
+      WHERE c.student_id = $1 AND c.device_id = $2
+      ORDER BY c.date DESC, c.id DESC
+    `, [req.params.student_id, device_id]);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 상담 추가
+app.post('/api/counseling', async (req, res) => {
+  try {
+    const { device_id, student_id, date, counsel_type, topic, content, result, follow_up, next_date } = req.body;
+    if (!device_id || !student_id || !counsel_type || !topic || !content) {
+      return res.status(400).json({ error: '필수 항목을 입력해주세요' });
+    }
+    const pool = getPool();
+    const dbResult = await pool.query(
+      `INSERT INTO counseling (device_id, student_id, date, counsel_type, topic, content, result, follow_up, next_date, is_completed)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false) RETURNING id`,
+      [device_id, student_id, date, counsel_type, topic, content, result || '', follow_up || '', next_date || null]
+    );
+    res.json({ id: dbResult.rows[0].id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 상담 수정
+app.put('/api/counseling/:id', async (req, res) => {
+  try {
+    const { device_id, student_id, date, counsel_type, topic, content, result, follow_up, next_date } = req.body;
+    const pool = getPool();
+    await pool.query(
+      `UPDATE counseling SET student_id=$1, date=$2, counsel_type=$3, topic=$4, content=$5, result=$6, follow_up=$7, next_date=$8
+       WHERE id=$9 AND device_id=$10`,
+      [student_id, date, counsel_type, topic, content, result || '', follow_up || '', next_date || null, req.params.id, device_id]
+    );
+    res.json({ message: '수정 완료' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 후속조치 완료
+app.patch('/api/counseling/:id/complete', async (req, res) => {
+  try {
+    const { device_id } = req.body;
+    const pool = getPool();
+    await pool.query(
+      'UPDATE counseling SET is_completed = true WHERE id = $1 AND device_id = $2',
+      [req.params.id, device_id]
+    );
+    res.json({ message: '완료 처리' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 상담 삭제
+app.delete('/api/counseling/:id', async (req, res) => {
+  try {
+    const { device_id } = req.query;
+    const pool = getPool();
+    await pool.query('DELETE FROM counseling WHERE id = $1 AND device_id = $2', [req.params.id, device_id]);
+    res.json({ message: '삭제 완료' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============ 대시보드 API ============
+
+app.get('/api/dashboard', async (req, res) => {
+  try {
+    const { device_id } = req.query;
+    if (!device_id) return res.status(400).json({ error: 'device_id 필요' });
+    const pool = getPool();
+    const students = await pool.query('SELECT COUNT(*) as count FROM students WHERE device_id = $1', [device_id]);
+    const pending = await pool.query(
+      `SELECT COUNT(*) as count FROM counseling WHERE device_id = $1 AND follow_up IS NOT NULL AND follow_up != '' AND is_completed = false`,
+      [device_id]
+    );
+    res.json({
+      student_count: parseInt(students.rows[0].count),
+      pending_counseling: parseInt(pending.rows[0].count),
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 서버 시작
 async function start() {
   await initDatabase();
