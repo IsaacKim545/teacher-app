@@ -345,6 +345,22 @@ app.delete('/api/counseling/:id', async (req, res) => {
 
 // ============ 대시보드 API ============
 
+// 전체 데이터 초기화
+app.delete('/api/reset', async (req, res) => {
+  try {
+    const { device_id } = req.query;
+    if (!device_id) return res.status(400).json({ error: 'device_id 필요' });
+    const pool = getPool();
+    await pool.query('DELETE FROM counseling WHERE device_id = $1', [device_id]);
+    await pool.query('DELETE FROM records WHERE device_id = $1', [device_id]);
+    await pool.query('DELETE FROM attendance WHERE device_id = $1', [device_id]);
+    await pool.query('DELETE FROM students WHERE device_id = $1', [device_id]);
+    res.json({ message: '초기화 완료' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/dashboard', async (req, res) => {
   try {
     const { device_id } = req.query;
