@@ -87,6 +87,7 @@ app.delete('/api/students/:id', async (req, res) => {
     await pool.query('DELETE FROM students WHERE id = $1 AND device_id = $2', [req.params.id, device_id]);
     await pool.query('DELETE FROM attendance WHERE student_id = $1 AND device_id = $2', [req.params.id, device_id]);
     await pool.query('DELETE FROM records WHERE student_id = $1 AND device_id = $2', [req.params.id, device_id]);
+    await pool.query('DELETE FROM counseling WHERE student_id = $1 AND device_id = $2', [req.params.id, device_id]);
     res.json({ message: '삭제 완료' });
   } catch (error) {
     res.status(500).json({ error: error.message });
